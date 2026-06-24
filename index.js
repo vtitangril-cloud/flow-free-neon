@@ -60,7 +60,8 @@ const elements = {
     trialRetryBtn: null,
     trialExitBtn: null,
     modeClassicBtn: null,
-    modeTrialBtn: null
+    modeTrialBtn: null,
+    debugOverlay: null // New diagnostic overlay
 };
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -102,10 +103,28 @@ function initDOMElements() {
     elements.trialExitBtn = document.getElementById("trial-exit-btn");
     elements.modeClassicBtn = document.getElementById("mode-classic-btn");
     elements.modeTrialBtn = document.getElementById("mode-trial-btn");
+
+    // Dynamic creation of Diagnostics overlay if it doesn't exist
+    let dbg = document.getElementById("game-diagnostics");
+    if (!dbg) {
+        dbg = document.createElement("div");
+        dbg.id = "game-diagnostics";
+        dbg.style.position = "absolute";
+        dbg.style.bottom = "10px";
+        dbg.style.left = "0";
+        dbg.style.width = "100%";
+        dbg.style.textAlign = "center";
+        dbg.style.fontSize = "0.7rem";
+        dbg.style.color = "rgba(0,229,255,0.7)";
+        dbg.style.fontFamily = "monospace";
+        dbg.style.pointerEvents = "none";
+        dbg.innerText = "Diag: ready";
+        canvas.parentElement.appendChild(dbg);
+    }
+    elements.debugOverlay = dbg;
 }
 
 function initAudio() {
-    // Lazy initialize on first interaction
     const initCtx = () => {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -133,39 +152,20 @@ function playTone(freq, type, duration, volume) {
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
     } catch (e) {
-        console.error("Audio Synthesis Error: ", e);
+        console.error(e);
     }
 }
-
-function playClickSound() {
-    playTone(880, "triangle", 0.08, 0.08);
-}
-
-function playBuzzSound() {
-    playTone(110, "sawtooth", 0.25, 0.15);
-}
-
-function playConnectionSound() {
-    playTone(523.25, "sine", 0.1, 0.1);
-    setTimeout(() => {
-        playTone(659.25, "sine", 0.15, 0.1);
-    }, 80);
-}
-
+function playClickSound() { playTone(300, "sine", 0.08, 0.1); }
+function playConnectionSound() { playTone(600, "triangle", 0.2, 0.15); }
+function playBuzzSound() { playTone(120, "sawtooth", 0.15, 0.1); }
+function playWarningSound() { playTone(440, "sine", 0.1, 0.08); }
 function playWinSound() {
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    notes.forEach((note, i) => {
-        setTimeout(() => {
-            playTone(note, "sine", 0.3, 0.12);
-        }, i * 120);
-    });
+    playTone(523.25, "sine", 0.1, 0.1); // C5
+    setTimeout(() => playTone(659.25, "sine", 0.1, 0.1), 100); // E5
+    setTimeout(() => playTone(783.99, "sine", 0.1, 0.1), 200); // G5
+    setTimeout(() => playTone(1046.50, "sine", 0.25, 0.15), 300); // C6
 }
 
-function playWarningSound() {
-    playTone(987.77, "sine", 0.15, 0.05);
-}
-
-// Event Listeners Setup
 function setupEventListeners() {
     elements.soundBtn.addEventListener("click", () => {
         isSoundEnabled = !isSoundEnabled;
@@ -241,6 +241,14 @@ function setupEventListeners() {
     canvas.addEventListener("pointermove", handleMove, { passive: false });
     window.addEventListener("pointerup", handleEnd);
 
+    // Prevent touch scrolling and zooming inside the canvas
+    canvas.addEventListener("touchstart", (e) => {
+        if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener("touchmove", (e) => {
+        if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
     window.addEventListener("resize", resizeCanvas);
 }
 
@@ -266,7 +274,6 @@ function startTrialMode() {
     trialBoardsSolved = 0;
     trialTimeRemaining = trialTimeLimit;
     
-    // Choose random grid sizes and levels for time trial
     chooseRandomTrialLevel();
     updateTimerUI();
 
@@ -287,7 +294,7 @@ function startTrialMode() {
 }
 
 function chooseRandomTrialLevel() {
-    const sizes = [5, 6]; // 5x5 or 6x6 for quicker solving
+    const sizes = [5, 6];
     const chosenSize = sizes[Math.floor(Math.random() * sizes.length)];
     const list = levelsData[`${chosenSize}x${chosenSize}`];
     const chosenLvl = list[Math.floor(Math.random() * list.length)];
@@ -301,9 +308,7 @@ function chooseRandomTrialLevel() {
 function updateTimerUI() {
     elements.timerText.textContent = trialTimeRemaining;
     const progress = elements.timerProgress;
-    
-    // SVG dashoffset logic for 60s countdown
-    const circumference = 2 * Math.PI * 45; // ~282.7
+    const circumference = 2 * Math.PI * 45;
     const offset = circumference - (trialTimeRemaining / trialTimeLimit) * circumference;
     progress.style.strokeDashoffset = offset;
 
@@ -322,7 +327,6 @@ function finishTrialMode() {
 
 function changeSize(size) {
     gridSize = size;
-    // Load first level of the selected size
     currentLevelId = 1;
     loadLevel(gridSize, currentLevelId);
     renderLevelButtons();
@@ -372,14 +376,7 @@ function renderLevelButtons() {
         const btn = document.createElement("button");
         btn.className = "lvl-btn";
         btn.textContent = lvl.id;
-        
-        // Show completion state from localStorage
-        const storageKey = `flow_free_completed_${gridSize}x${gridSize}_${lvl.id}`;
-        if (localStorage.getItem(storageKey) === "true") {
-            btn.classList.add("completed");
-            btn.innerHTML = `${lvl.id} <span style="font-size: 0.7rem; margin-top: 2px;">✓</span>`;
-        }
-
+        if (lvl.id === currentLevelId) btn.classList.add("active");
         btn.addEventListener("click", () => {
             playClickSound();
             loadLevel(gridSize, lvl.id);
@@ -390,18 +387,9 @@ function renderLevelButtons() {
 
 function highlightActiveLevelButton() {
     document.querySelectorAll(".lvl-btn").forEach(btn => {
-        if (parseInt(btn.textContent) === currentLevelId) {
-            btn.classList.add("active");
-        } else {
-            btn.classList.remove("active");
-        }
+        const isCurrent = parseInt(btn.textContent) === currentLevelId;
+        btn.classList.toggle("active", isCurrent);
     });
-}
-
-function resetLevel() {
-    initGrid();
-    drawBoard();
-    updateStats();
 }
 
 function loadNextLevel() {
@@ -411,7 +399,6 @@ function loadNextLevel() {
         currentLevelId = nextLvl.id;
         loadLevel(gridSize, currentLevelId);
     } else {
-        // Go to next grid size if available
         const nextSize = gridSize + 1;
         const nextSizeList = levelsData[`${nextSize}x${nextSize}`];
         if (nextSizeList) {
@@ -421,7 +408,6 @@ function loadNextLevel() {
                 }
             });
         } else {
-            // Circle back to Level 1
             loadLevel(gridSize, 1);
         }
     }
@@ -440,9 +426,11 @@ function resizeCanvas() {
     drawBoard();
 }
 
-// Coords Translation
+// Coordinate Translation logic (unifying device DPI and wrapper offset)
 function getGridCoords(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
+    
+    // Scale client coords to fit canvas resolution
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
@@ -463,13 +451,19 @@ function handleStart(e) {
     const clientX = e.clientX;
     const clientY = e.clientY;
     const pt = getGridCoords(clientX, clientY);
+
+    // Update diagnostic logs
+    if (elements.debugOverlay) {
+        elements.debugOverlay.innerText = `Start: screen(${Math.round(clientX)},${Math.round(clientY)}) -> cell(${pt ? pt.x : 'x'},${pt ? pt.y : 'x'})`;
+    }
+
     if (!pt) return;
 
     const cell = grid[pt.y][pt.x];
     if (cell.color) {
         if (e.cancelable) e.preventDefault();
         drawingColor = cell.color;
-        // If clicking on an endpoint, reset current pipe
+        
         if (cell.isEndpoint) {
             resetPipe(drawingColor);
             drawingPath = [pt];
@@ -477,7 +471,6 @@ function handleStart(e) {
             updateGridWithPipe(drawingColor);
             playClickSound();
         } else {
-            // Clicking along an existing pipe -> truncate from here
             const idx = pipes[drawingColor].findIndex(p => p.x === pt.x && p.y === pt.y);
             if (idx !== -1) {
                 pipes[drawingColor] = pipes[drawingColor].slice(0, idx + 1);
@@ -497,20 +490,24 @@ function handleMove(e) {
     const clientX = e.clientX;
     const clientY = e.clientY;
     const pt = getGridCoords(clientX, clientY);
+
+    if (elements.debugOverlay) {
+        elements.debugOverlay.innerText = `Move: screen(${Math.round(clientX)},${Math.round(clientY)}) -> cell(${pt ? pt.x : 'x'},${pt ? pt.y : 'x'}) color=${drawingColor}`;
+    }
+
     if (!pt) return;
 
     const lastPt = drawingPath[drawingPath.length - 1];
     if (pt.x === lastPt.x && pt.y === lastPt.y) return; // Same cell
 
-    // Must be orthogonal neighbor
+    // Orthogonal movement check
     const dx = Math.abs(pt.x - lastPt.x);
     const dy = Math.abs(pt.y - lastPt.y);
     if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
         
-        // Truncate path if backtracking
+        // Truncating current path on backtrack
         const existingIdx = drawingPath.findIndex(p => p.x === pt.x && p.y === pt.y);
         if (existingIdx !== -1) {
-            // Backtracking: Slice back to that point
             drawingPath = drawingPath.slice(0, existingIdx + 1);
             pipes[drawingColor] = [...drawingPath];
             updateGridWithPipe(drawingColor);
@@ -521,16 +518,13 @@ function handleMove(e) {
 
         const cell = grid[pt.y][pt.x];
         
-        // Check if endpoint of another color
         if (cell.isEndpoint && cell.color !== drawingColor) return;
 
-        // Check if endpoint of the same color
         if (cell.isEndpoint && cell.color === drawingColor) {
-            // Complete connection!
             drawingPath.push(pt);
             pipes[drawingColor] = [...drawingPath];
             updateGridWithPipe(drawingColor);
-            drawingColor = null; // stop drawing
+            drawingColor = null; // Complete
             movesCount++;
             playConnectionSound();
             checkWinCondition();
@@ -538,15 +532,12 @@ function handleMove(e) {
             return;
         }
 
-        // Check if intersecting another color's pipe
         if (cell.color && cell.color !== drawingColor && !cell.isEndpoint) {
-            // Break the other pipe!
             const hitColor = cell.color;
             resetPipe(hitColor);
             playBuzzSound();
         }
 
-        // Draw forward
         drawingPath.push(pt);
         pipes[drawingColor] = [...drawingPath];
         updateGridWithPipe(drawingColor);
@@ -556,21 +547,23 @@ function handleMove(e) {
 
 function handleEnd() {
     if (drawingColor) {
-        // Released draw mid-way
         drawingColor = null;
         movesCount++;
         checkWinCondition();
         updateStats();
         drawBoard();
     }
+    if (elements.debugOverlay) {
+        elements.debugOverlay.innerText = `End: ready`;
+    }
 }
 
 function resetPipe(color) {
-    // Remove pipe styling from grid
     for (let y = 0; y < gridSize; y++) {
         for (let x = 0; x < gridSize; x++) {
-            if (grid[y][x].color === color && !grid[y][x].isEndpoint) {
-                grid[y][x] = { color: null, isEndpoint: false, pathId: null };
+            if (grid[y][x].pathId === color && !grid[y][x].isEndpoint) {
+                grid[y][x].color = null;
+                grid[y][x].pathId = null;
             }
         }
     }
@@ -578,114 +571,91 @@ function resetPipe(color) {
 }
 
 function updateGridWithPipe(color) {
-    // Clear old pipe route
-    resetPipe(color);
-    // Draw new pipe route
-    pipes[color].forEach(pt => {
+    // Clear old non-endpoint styles for this pipe
+    for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+            if (grid[y][x].pathId === color && !grid[y][x].isEndpoint) {
+                grid[y][x].color = null;
+                grid[y][x].pathId = null;
+            }
+        }
+    }
+    // Repopulate using current path coordinates
+    const path = pipes[color] || [];
+    path.forEach(pt => {
         if (!grid[pt.y][pt.x].isEndpoint) {
-            grid[pt.y][pt.x] = {
-                color: color,
-                isEndpoint: false,
-                pathId: color
-            };
+            grid[pt.y][pt.x].color = color;
+            grid[pt.y][pt.x].pathId = color;
         }
     });
 }
 
-// Game Stats
+function resetLevel() {
+    initGrid();
+    drawBoard();
+    updateStats();
+}
+
 function updateStats() {
-    if (gameMode === "classic") {
-        elements.levelDisplay.textContent = `${gridSize}x${gridSize} #${currentLevelId}`;
-    } else {
-        elements.levelDisplay.textContent = `TRIAL MODE`;
-    }
-    
-    // Count connection states
     completedFlows = 0;
-    let totalFlows = currentLevel.pairs.length;
+    let cellsFilled = 0;
+
+    for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+            if (grid[y][x].color) {
+                cellsFilled++;
+            }
+        }
+    }
+
+    const flowCount = currentLevel.pairs.length;
     currentLevel.pairs.forEach(pair => {
-        const path = pipes[pair.color];
-        if (path && path.length > 1) {
-            const start = pair.pts[0];
-            const end = pair.pts[1];
-            // Valid if start is start-pt and end is end-pt
-            const connectsStart = path[0].x === start.x && path[0].y === start.y;
-            const connectsEnd = path[path.length - 1].x === end.x && path[path.length - 1].y === end.y;
-            if (connectsStart && connectsEnd) {
+        const path = pipes[pair.color] || [];
+        if (path.length > 1) {
+            const first = path[0];
+            const last = path[path.length - 1];
+            const ep1 = grid[first.y][first.x];
+            const ep2 = grid[last.y][last.x];
+            if (ep1.isEndpoint && ep2.isEndpoint && first !== last) {
                 completedFlows++;
             }
         }
     });
 
-    elements.flowsDisplay.textContent = `${completedFlows} / ${totalFlows}`;
+    percentCovered = Math.round((cellsFilled / (gridSize * gridSize)) * 100);
+
+    elements.flowsDisplay.textContent = `${completedFlows} / ${flowCount}`;
     elements.movesDisplay.textContent = movesCount;
-
-    // Check best moves in localStorage
-    const storageKey = `flow_free_best_${gridSize}x${gridSize}_${currentLevelId}`;
-    const storedBest = localStorage.getItem(storageKey);
-    if (storedBest && gameMode === "classic") {
-        elements.bestMovesDisplay.textContent = `best: ${storedBest}`;
-    } else {
-        elements.bestMovesDisplay.textContent = `best: -`;
-    }
-
-    // Pipe Coverage
-    let filledCells = 0;
-    for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-            if (grid[y][x].color !== null) {
-                filledCells++;
-            }
-        }
-    }
-    percentCovered = Math.round((filledCells / (gridSize * gridSize)) * 100);
     elements.percentDisplay.textContent = `${percentCovered}%`;
 
-    // Toggle next-level buttons if solved
-    const solved = (completedFlows === totalFlows && percentCovered === 100);
-    elements.nextBtn.disabled = !solved;
+    const nextDisabled = (completedFlows !== flowCount || percentCovered < 100);
+    elements.nextBtn.disabled = nextDisabled;
 }
 
-// Logic: Check Win Condition
 function checkWinCondition() {
     updateStats();
-    let totalFlows = currentLevel.pairs.length;
-    if (completedFlows === totalFlows && percentCovered === 100) {
-        // Solved successfully!
+    const flowCount = currentLevel.pairs.length;
+    if (completedFlows === flowCount && percentCovered >= 100) {
         if (gameMode === "classic") {
-            // Save completion
-            const storageLvlKey = `flow_free_completed_${gridSize}x${gridSize}_${currentLevelId}`;
-            localStorage.setItem(storageLvlKey, "true");
-            
-            // Save best score
-            const storageBestKey = `flow_free_best_${gridSize}x${gridSize}_${currentLevelId}`;
-            const prevBest = localStorage.getItem(storageBestKey);
-            if (!prevBest || movesCount < parseInt(prevBest)) {
-                localStorage.setItem(storageBestKey, movesCount);
-            }
-
-            // Render stats into modal
-            elements.sumMoves.textContent = movesCount;
-            elements.sumTarget.textContent = totalFlows;
-            elements.sumScore.textContent = (movesCount === totalFlows) ? "PERFECT!" : "COMPLETED";
-
-            setTimeout(() => {
-                elements.completeModal.classList.remove("hidden");
-                playWinSound();
-                renderLevelButtons();
-            }, 300);
-        } else {
-            // Time Trial: Solve random levels to increase score
-            trialBoardsSolved++;
             playWinSound();
-            setTimeout(() => {
-                chooseRandomTrialLevel();
-            }, 300);
+            showWinModal();
+        } else {
+            // Time Trial Solved Board
+            trialBoardsSolved++;
+            playConnectionSound();
+            chooseRandomTrialLevel();
         }
     }
 }
 
-// Board Canvas Renderer
+function showWinModal() {
+    const target = currentLevel.pairs.length;
+    elements.sumMoves.textContent = movesCount;
+    elements.sumTarget.textContent = target;
+    elements.sumScore.textContent = (movesCount === target) ? "PERFECT" : "SOLVED";
+    elements.completeModal.classList.remove("hidden");
+}
+
 function drawBoard() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -693,13 +663,11 @@ function drawBoard() {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
     ctx.lineWidth = 2;
     for (let i = 0; i <= gridSize; i++) {
-        // Vertical lines
         ctx.beginPath();
         ctx.moveTo(padding + i * cellSize, padding);
         ctx.lineTo(padding + i * cellSize, canvas.height - padding);
         ctx.stroke();
 
-        // Horizontal lines
         ctx.beginPath();
         ctx.moveTo(padding, padding + i * cellSize);
         ctx.lineTo(canvas.width - padding, padding + i * cellSize);
@@ -715,7 +683,6 @@ function drawBoard() {
             ctx.lineCap = "round";
             ctx.lineJoin = "round";
 
-            // Glow style
             ctx.shadowBlur = 15;
             ctx.shadowColor = color;
 
@@ -735,7 +702,6 @@ function drawBoard() {
         }
     });
 
-    // Reset shadow style for endpoints
     ctx.shadowBlur = 0;
 
     // Draw Endpoints
@@ -747,7 +713,6 @@ function drawBoard() {
                 const cy = padding + y * cellSize + cellSize / 2;
                 const radius = cellSize * 0.28;
 
-                // Glowing outer ring for endpoint dots
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = cell.color;
 
@@ -756,7 +721,6 @@ function drawBoard() {
                 ctx.arc(cx, cy, radius, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Inner core highlights
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
                 ctx.beginPath();
