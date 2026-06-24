@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Free Neon - Premium Arcade Puzzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./index.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo-area">
+                <span class="pulse-dot"></span>
+                <h1>FLOW <span class="accent">FREE</span></h1>
+                <span class="neon-badge">NEON ARCADE</span>
+            </div>
+            <div class="sound-control">
+                <button id="sound-btn" class="glass-btn icon-btn" title="Toggle Sound">
+                    <svg id="sound-on-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.063.922-2.063 2.063v4.875c0 1.141.922 2.062 2.063 2.062h1.932l4.5 4.5c.944.944 2.56.276 2.56-1.06V4.06zM17.78 6.22a.75.75 0 10-1.06 1.06 8.25 8.25 0 010 11.66.75.75 0 001.06 1.06 9.75 9.75 0 000-13.78z" /><path d="M15.66 9.39a.75.75 0 10-1.06 1.06 5.25 5.25 0 010 7.42.75.75 0 101.06 1.06 6.75 6.75 0 000-9.54z" /></svg>
+                    <svg id="sound-off-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.063.922-2.063 2.063v4.875c0 1.141.922 2.062 2.063 2.062h1.932l4.5 4.5c.944.944 2.56.276 2.56-1.06V4.06zM15.3 8.4a.75.75 0 00-1.06 1.06l4.24 4.24-4.24 4.24a.75.75 0 101.06 1.06l4.24-4.24 4.24 4.24a.75.75 0 101.06-1.06l-4.24-4.24 4.24-4.24a.75.75 0 00-1.06-1.06l-4.24 4.24-4.24-4.24z" /></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="game-workspace">
+            
+            <!-- Left Panel: Grid Size & Level Selection -->
+            <section class="control-panel glass-card">
+                <div class="panel-section">
+                    <h3>SELECT SIZE</h3>
+                    <div class="grid-size-selector">
+                        <button class="size-btn active" data-size="5x5">5 x 5</button>
+                        <button class="size-btn" data-size="6x6">6 x 6</button>
+                        <button class="size-btn" data-size="7x7">7 x 7</button>
+                        <button class="size-btn" data-size="8x8">8 x 8</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>LEVELS</h3>
+                    <div class="level-list" id="level-buttons-container">
+                        <!-- Dynamic Level Buttons -->
+                    </div>
+                </div>
+
+                <div class="panel-section mode-section">
+                    <h3>GAME MODE</h3>
+                    <div class="mode-toggle">
+                        <button id="mode-classic-btn" class="mode-btn active">CLASSIC</button>
+                        <button id="mode-trial-btn" class="mode-btn">TIME TRIAL</button>
+                    </div>
+                </div>
+
+                <div class="panel-footer">
+                    <button id="help-btn" class="glass-btn text-btn">HOW TO PLAY</button>
+                </div>
+            </section>
+
+            <!-- Center Panel: Game Canvas and Stats -->
+            <section class="game-container">
+                <!-- Stats Bar -->
+                <div class="stats-bar glass-card">
+                    <div class="stat-box">
+                        <span class="stat-label">LEVEL</span>
+                        <span id="level-display" class="stat-value">5x5 #1</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">FLOWS</span>
+                        <span id="flows-display" class="stat-value">0 / 5</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">MOVES</span>
+                        <span id="moves-display" class="stat-value">0</span>
+                        <span id="best-moves-display" class="stat-sub">best: -</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">PIPE %</span>
+                        <span id="percent-display" class="stat-value">0%</span>
+                    </div>
+                </div>
+
+                <!-- Game Board Wrapper -->
+                <div class="canvas-wrapper">
+                    <canvas id="game-canvas"></canvas>
+                    
+                    <!-- Time Trial Timer Overlay -->
+                    <div id="trial-timer-overlay" class="hidden">
+                        <div class="timer-arc-container">
+                            <svg class="timer-svg" viewBox="0 0 100 100">
+                                <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+                                <circle id="timer-progress" cx="50" cy="50" r="45"></circle>
+                            </svg>
+                            <div id="timer-text">60</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Action Buttons -->
+                <div class="action-bar">
+                    <button id="restart-btn" class="glass-btn border-btn action-icon-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                        RESTART
+                    </button>
+                    <button id="next-btn" class="neon-btn border-btn action-icon-btn" disabled>
+                        NEXT LEVEL
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- How To Play Overlay -->
+    <div id="help-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card animate-zoom">
+            <h2>HOW TO PLAY</h2>
+            <div class="help-steps">
+                <div class="help-step">
+                    <span class="step-num">1</span>
+                    <p>Connect matching colors by drawing a pipe between the matching colored dots.</p>
+                </div>
+                <div class="help-step">
+                    <span class="step-num">2</span>
+                    <p>Pipes will break if they cross or overlap with other pipes.</p>
+                </div>
+                <div class="help-step">
+                    <span class="step-num">3</span>
+                    <p>Pair all matching colors AND fill the entire board with pipes to complete the puzzle!</p>
+                </div>
+            </div>
+            <button id="close-help-btn" class="neon-btn">GOT IT</button>
+        </div>
+    </div>
+
+    <!-- Level Complete Popup -->
+    <div id="complete-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card success-card animate-zoom">
+            <div class="trophy-icon">🏆</div>
+            <h2>BOARD COMPLETED!</h2>
+            <p class="congrats-sub">Perfect connection achieved.</p>
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <span class="sum-label">Moves</span>
+                    <span id="sum-moves" class="sum-val">0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="sum-label">Target Moves</span>
+                    <span id="sum-target" class="sum-val">0</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="sum-label">Score</span>
+                    <span id="sum-score" class="sum-val">PERFECT</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="modal-next-btn" class="neon-btn">NEXT LEVEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Trial Results Popup -->
+    <div id="trial-results-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card time-trial-card animate-zoom">
+            <div class="timer-finish-icon">⚡</div>
+            <h2>TIME'S UP!</h2>
+            <p class="trial-desc">You completed as many boards as possible in 60 seconds.</p>
+            <div class="trial-summary">
+                <div class="trial-score-box">
+                    <span class="trial-score-label">BOARDS SOLVED</span>
+                    <span id="trial-boards-solved" class="trial-score-val">0</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="trial-retry-btn" class="neon-btn">TRY AGAIN</button>
+                <button id="trial-exit-btn" class="glass-btn border-btn">BACK TO CLASSIC</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./index.js"></script>
+</body>
+</html>
