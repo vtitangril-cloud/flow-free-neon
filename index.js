@@ -236,14 +236,10 @@ function setupEventListeners() {
         });
     });
 
-    // Canvas Draw interactions
-    canvas.addEventListener("mousedown", handleStart);
-    canvas.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleEnd);
-
-    canvas.addEventListener("touchstart", handleStart, { passive: false });
-    canvas.addEventListener("touchmove", handleMove, { passive: false });
-    window.addEventListener("touchend", handleEnd);
+    // Use Pointer Events for unified touch and mouse support
+    canvas.addEventListener("pointerdown", handleStart);
+    canvas.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleEnd);
 
     window.addEventListener("resize", resizeCanvas);
 }
@@ -464,8 +460,8 @@ function getGridCoords(clientX, clientY) {
 
 // Interaction Handlers
 function handleStart(e) {
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
     const pt = getGridCoords(clientX, clientY);
     if (!pt) return;
 
@@ -498,8 +494,8 @@ function handleMove(e) {
     if (!drawingColor) return;
     e.preventDefault();
 
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
     const pt = getGridCoords(clientX, clientY);
     if (!pt) return;
 
