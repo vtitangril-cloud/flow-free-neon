@@ -237,8 +237,8 @@ function setupEventListeners() {
     });
 
     // Use Pointer Events for unified touch and mouse support
-    canvas.addEventListener("pointerdown", handleStart);
-    canvas.addEventListener("pointermove", handleMove);
+    canvas.addEventListener("pointerdown", handleStart, { passive: false });
+    canvas.addEventListener("pointermove", handleMove, { passive: false });
     window.addEventListener("pointerup", handleEnd);
 
     window.addEventListener("resize", resizeCanvas);
@@ -467,7 +467,7 @@ function handleStart(e) {
 
     const cell = grid[pt.y][pt.x];
     if (cell.color) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         drawingColor = cell.color;
         // If clicking on an endpoint, reset current pipe
         if (cell.isEndpoint) {
@@ -492,7 +492,7 @@ function handleStart(e) {
 
 function handleMove(e) {
     if (!drawingColor) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
 
     const clientX = e.clientX;
     const clientY = e.clientY;
