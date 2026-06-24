@@ -434,7 +434,10 @@ function loadNextLevel() {
 // Layout sizing
 function resizeCanvas() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    const size = Math.min(rect.width, rect.height, 480);
+    let size = rect.width;
+    if (!size || size < 50) {
+        size = Math.min(window.innerWidth * 0.9, 480);
+    }
     canvas.width = size;
     canvas.height = size;
     cellSize = (size - padding * 2) / gridSize;
@@ -444,8 +447,11 @@ function resizeCanvas() {
 // Coords Translation
 function getGridCoords(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
-    const x = clientX - rect.left - padding;
-    const y = clientY - rect.top - padding;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (clientX - rect.left) * scaleX - padding;
+    const y = (clientY - rect.top) * scaleY - padding;
     
     const cellX = Math.floor(x / cellSize);
     const cellY = Math.floor(y / cellSize);
@@ -458,7 +464,6 @@ function getGridCoords(clientX, clientY) {
 
 // Interaction Handlers
 function handleStart(e) {
-    e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const pt = getGridCoords(clientX, clientY);
@@ -466,6 +471,7 @@ function handleStart(e) {
 
     const cell = grid[pt.y][pt.x];
     if (cell.color) {
+        e.preventDefault();
         drawingColor = cell.color;
         // If clicking on an endpoint, reset current pipe
         if (cell.isEndpoint) {
@@ -489,8 +495,8 @@ function handleStart(e) {
 }
 
 function handleMove(e) {
-    e.preventDefault();
     if (!drawingColor) return;
+    e.preventDefault();
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
